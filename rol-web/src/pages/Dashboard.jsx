@@ -10,7 +10,9 @@ import {
   Shield,
   Sparkles,
   UserRound,
-  Users
+  Users,
+  Heart,
+  PenLine
 } from "lucide-react";
 import {
   baseStats,
@@ -74,6 +76,8 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
   const [tableError, setTableError] = useState("");
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState(profile?.displayName ?? user.displayName);
   const selectedUser = useMemo(
     () => users.find((tableUser) => tableUser.id === selectedUserId) ?? profile,
     [profile, selectedUserId, users]
@@ -205,6 +209,14 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
     }
   }
 
+  const saveName = async () => {
+    await updateUserProfile(user.uid, {
+      displayName: newName
+    });
+
+    setIsEditingName(false);
+  };
+
   return (
     <main className="dashboard-page">
       <header className="topbar">
@@ -231,7 +243,53 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
       <section className="profile-summary">
         <img src={user.photoURL} alt="" className="avatar" referrerPolicy="no-referrer" />
         <div>
-          <p className="profile-name">{profile?.displayName ?? user.displayName}</p>
+          <div>
+            <p className="profile-name">
+              {isEditingName ? (
+                <>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    autoFocus
+                  />
+
+                  <button
+                    type="button"
+                    onClick={saveName}
+                  >
+                    Guardar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingName(false)}
+                  >
+                    Cancelar
+                  </button>
+                </>
+              ) : (
+                <>
+                  {profile?.displayName ?? user.displayName}
+
+                  <button
+                    className="name-button"
+                    type="button"
+                    onClick={() => {
+                      setNewName(profile?.displayName ?? user.displayName);
+                      setIsEditingName(true);
+                    }}
+                    title="Cambiar nombre"
+                  >
+                    <PenLine size={11} />
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
+          <strong className="player-number">
+            Lv. {profile?.stats?.level ?? 1}
+          </strong>
         </div>
         <span className={isMaster ? "role-badge master" : "role-badge"}>
           {isMaster ? <Crown size={16} /> : <UserRound size={16} />}
@@ -362,7 +420,7 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
 
           <article className="panel">
             <div className="panel-heading">
-              <Shield size={20} />
+              <Heart size={20} />
               <h2>Log de vida</h2>
             </div>
             {selectedUser?.healthLog?.length ? (

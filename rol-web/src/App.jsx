@@ -12,6 +12,7 @@ export default function App() {
   async function syncProfile(user) {
     try {
       const profile = await ensureUserProfile(user);
+      console.log(profile)
       setError("");
       setSession({ loading: false, user, profile });
     } catch (err) {

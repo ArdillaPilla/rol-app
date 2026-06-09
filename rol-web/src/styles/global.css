@@ -618,3 +618,20 @@ p {
     text-align: left;
   }
 }
+
+.name-button {
+  margin-left: 8px;
+  display: inline-grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 1px solid #cdd8d0;
+  border-radius: 8px;
+  color: #13251e;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.name-button:hover {
+  background: #e7f4eb;
+}
