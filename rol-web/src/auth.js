@@ -1,4 +1,4 @@
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
 import { signInWithPopup, signOut } from "firebase/auth";
 import { auth, db, googleProvider } from "./firebase";
 
@@ -51,6 +51,7 @@ export async function ensureUserProfile(user) {
   }
 
   const userRef = doc(db, "users", user.uid);
+  const snapshot = await getDoc(userRef);
   const sharedProfile = {
     uid: user.uid,
     displayName: user.displayName ?? "Jugador",
@@ -59,7 +60,20 @@ export async function ensureUserProfile(user) {
     updatedAt: serverTimestamp()
   };
 
-  const defaultProfile = {
+  if (snapshot.exists()) {
+    const data = snapshot.data();
+    const completedProfile = {
+      ...data,
+      role: data.role ?? "player",
+      stats: { ...baseStats, ...(data.stats ?? {}) },
+      inventory: data.inventory ?? []
+    };
+
+    await setDoc(userRef, completedProfile, { merge: true });
+    return { id: user.uid, ...completedProfile, ...sharedProfile };
+  }
+
+  const newProfile = {
     ...sharedProfile,
     role: "player",
     stats: baseStats,
@@ -67,15 +81,8 @@ export async function ensureUserProfile(user) {
     createdAt: serverTimestamp()
   };
 
-  await setDoc(userRef, defaultProfile, { merge: true });
-
-  const snapshot = await getDoc(userRef);
-
-  if (snapshot.exists()) {
-    return { id: user.uid, ...snapshot.data(), ...sharedProfile };
-  }
-
-  return { id: user.uid, ...defaultProfile };
+  await setDoc(userRef, newProfile);
+  return { id: user.uid, ...newProfile };
 }
 
 export async function getUserProfile(uid) {
@@ -85,4 +92,30 @@ export async function getUserProfile(uid) {
 
   const snapshot = await getDoc(doc(db, "users", uid));
   return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
+}
+
+export async function getAllUserProfiles() {
+  if (!db) {
+    throw new Error("Firestore no esta configurado. Revisa las variables VITE_FIREBASE_*.");
+  }
+
+  const snapshot = await getDocs(collection(db, "users"));
+  return snapshot.docs
+    .map((userDoc) => ({ id: userDoc.id, ...userDoc.data() }))
+    .sort((a, b) => (a.displayName ?? "").localeCompare(b.displayName ?? ""));
+}
+
+export async function updateUserProfile(uid, updates) {
+  if (!db) {
+    throw new Error("Firestore no esta configurado. Revisa las variables VITE_FIREBASE_*.");
+  }
+
+  await setDoc(
+    doc(db, "users", uid),
+    {
+      ...updates,
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
 }

@@ -23,7 +23,7 @@ Cuando un usuario entre por primera vez, se creara un documento en Firestore:
 users/{uid}
 ```
 
-Para convertirlo en master, cambia el campo:
+Para convertirlo en master, cambia el campo en Firestore:
 
 ```json
 {
@@ -38,6 +38,9 @@ Los demas usuarios se crean como:
   "role": "player"
 }
 ```
+
+Al refrescar la web, el master vera una tabla con todos los usuarios y podra editar rol, nivel,
+estadisticas e inventario. Los jugadores tambien ven la tabla, pero solo como lectura.
 
 ## Servidor local
 
@@ -65,8 +68,41 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isMaster() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "master";
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if signedIn();
+      allow create: if isMaster()
+        || (
+          isOwner(userId)
+          && request.resource.data.uid == userId
+          && request.resource.data.role == "player"
+        );
+      allow update: if isMaster()
+        || (
+          isOwner(userId)
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "displayName",
+            "email",
+            "photoURL",
+            "uid",
+            "updatedAt"
+          ])
+        );
+      allow delete: if isMaster();
     }
   }
 }
