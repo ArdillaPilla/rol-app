@@ -14,16 +14,28 @@ export const baseStats = {
 };
 
 export async function signInWithGoogle() {
+  if (!auth || !googleProvider) {
+    throw new Error("Firebase no esta configurado. Revisa las variables VITE_FIREBASE_*.");
+  }
+
   const result = await signInWithPopup(auth, googleProvider);
   await ensureUserProfile(result.user);
   return result.user;
 }
 
 export function logout() {
+  if (!auth) {
+    return Promise.resolve();
+  }
+
   return signOut(auth);
 }
 
 export async function ensureUserProfile(user) {
+  if (!db) {
+    throw new Error("Firestore no esta configurado. Revisa las variables VITE_FIREBASE_*.");
+  }
+
   const userRef = doc(db, "users", user.uid);
   const snapshot = await getDoc(userRef);
 
@@ -53,6 +65,10 @@ export async function ensureUserProfile(user) {
 }
 
 export async function getUserProfile(uid) {
+  if (!db) {
+    throw new Error("Firestore no esta configurado. Revisa las variables VITE_FIREBASE_*.");
+  }
+
   const snapshot = await getDoc(doc(db, "users", uid));
   return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
 }

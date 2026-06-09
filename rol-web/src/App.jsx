@@ -1,6 +1,6 @@
 import { onAuthStateChanged } from "firebase/auth";
 import React, { useEffect, useState } from "react";
-import { auth, missingFirebaseConfig } from "./firebase";
+import { auth, isFirebaseConfigured, missingFirebaseConfig } from "./firebase";
 import { ensureUserProfile } from "./auth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -10,6 +10,11 @@ export default function App() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!isFirebaseConfigured) {
+      setSession({ loading: false, user: null, profile: null });
+      return undefined;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setError("");
 

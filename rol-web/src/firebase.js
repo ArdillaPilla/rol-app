@@ -11,12 +11,19 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-export const missingFirebaseConfig = Object.entries(firebaseConfig)
+const configProblems = Object.entries(firebaseConfig)
   .filter(([, value]) => !value || value.startsWith("tu_") || value.startsWith("your_"))
   .map(([key]) => key);
 
-const app = initializeApp(firebaseConfig);
+if (firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("AIza")) {
+  configProblems.push("apiKey no parece una Web API Key valida");
+}
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const googleProvider = new GoogleAuthProvider();
+export const missingFirebaseConfig = configProblems;
+export const isFirebaseConfigured = missingFirebaseConfig.length === 0;
+
+const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
+
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
+export const googleProvider = app ? new GoogleAuthProvider() : null;
