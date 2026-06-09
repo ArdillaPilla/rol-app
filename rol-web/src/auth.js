@@ -60,16 +60,17 @@ export async function ensureUserProfile(user) {
   const snapshot = await getDoc(userRef);
   const sharedProfile = {
     uid: user.uid,
-    displayName: user.displayName ?? "Jugador",
     email: user.email ?? "",
     photoURL: user.photoURL ?? "",
     updatedAt: serverTimestamp()
   };
+  const authDisplayName = user.displayName ?? "Jugador";
 
   if (snapshot.exists()) {
     const data = snapshot.data();
     const completedProfile = {
       ...data,
+      displayName: data.displayName ?? authDisplayName,
       role: data.role ?? "player",
       stats: { ...baseStats, ...(data.stats ?? {}), maxHp: data.stats?.maxHp ?? data.stats?.hp ?? baseStats.maxHp },
       inventory: data.inventory ?? [],
@@ -81,6 +82,7 @@ export async function ensureUserProfile(user) {
   }
 
   const newProfile = {
+    displayName: authDisplayName,
     ...sharedProfile,
     role: "player",
     stats: baseStats,

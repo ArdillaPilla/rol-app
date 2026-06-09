@@ -23,6 +23,7 @@ import {
 } from "../auth";
 
 const statLabels = {
+  level: "Level",
   hp: "Vida",
   strength: "Fuerza",
   dexterity: "Destreza",
@@ -141,6 +142,10 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
       });
 
       await loadUsers();
+
+      if (selectedUser.id === user.uid && typeof onRetryProfile === "function") {
+        await onRetryProfile();
+      }
     } catch (err) {
       setTableError(getFriendlyFirebaseError(err));
     } finally {
@@ -204,6 +209,10 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
           }
         }));
       }
+
+      if (targetUser.id === user.uid && typeof onRetryProfile === "function") {
+        await onRetryProfile();
+      }
     } catch (err) {
       setTableError(getFriendlyFirebaseError(err));
     }
@@ -215,6 +224,9 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
     });
 
     setIsEditingName(false);
+    if (typeof onRetryProfile === "function") {
+      await onRetryProfile();
+    }
   };
 
   return (
@@ -270,7 +282,9 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
                 </>
               ) : (
                 <>
-                  {profile?.displayName ?? user.displayName}
+                  {console.log(profile)}
+                  {console.log(user)}
+                  {profile?.displayName}
 
                   <button
                     className="name-button"
