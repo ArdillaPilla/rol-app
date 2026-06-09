@@ -157,6 +157,23 @@ p {
   padding-bottom: 24px;
 }
 
+.status-panel {
+  display: flex;
+  width: min(1120px, 100%);
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 auto 18px;
+  padding: 16px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #7f1d1d;
+}
+
+.status-panel .error-message {
+  margin: 0;
+}
+
 .topbar .eyebrow {
   margin-top: 0;
 }

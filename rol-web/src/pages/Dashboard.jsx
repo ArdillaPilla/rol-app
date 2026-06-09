@@ -1,5 +1,5 @@
 import React from "react";
-import { Crown, LogOut, Package, Shield, Sparkles, UserRound } from "lucide-react";
+import { Crown, LogOut, Package, RotateCw, Shield, Sparkles, UserRound } from "lucide-react";
 import { logout } from "../auth";
 
 const statLabels = {
@@ -13,7 +13,7 @@ const statLabels = {
   charisma: "Carisma"
 };
 
-export default function Dashboard({ user, profile, error }) {
+export default function Dashboard({ user, profile, error, onRetryProfile }) {
   const isMaster = profile?.role === "master";
   const stats = profile?.stats ?? {};
 
@@ -30,7 +30,15 @@ export default function Dashboard({ user, profile, error }) {
         </button>
       </header>
 
-      {error && <p className="error-message">{error}</p>}
+      {error && (
+        <section className="status-panel">
+          <p className="error-message">{error}</p>
+          <button className="ghost-button" type="button" onClick={onRetryProfile}>
+            <RotateCw size={18} />
+            Reintentar guardar perfil
+          </button>
+        </section>
+      )}
 
       <section className="profile-summary">
         <img src={user.photoURL} alt="" className="avatar" referrerPolicy="no-referrer" />

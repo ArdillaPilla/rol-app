@@ -51,8 +51,6 @@ export async function ensureUserProfile(user) {
   }
 
   const userRef = doc(db, "users", user.uid);
-  const snapshot = await getDoc(userRef);
-
   const sharedProfile = {
     uid: user.uid,
     displayName: user.displayName ?? "Jugador",
@@ -61,12 +59,7 @@ export async function ensureUserProfile(user) {
     updatedAt: serverTimestamp()
   };
 
-  if (snapshot.exists()) {
-    await setDoc(userRef, sharedProfile, { merge: true });
-    return { id: user.uid, ...snapshot.data(), ...sharedProfile };
-  }
-
-  const newProfile = {
+  const defaultProfile = {
     ...sharedProfile,
     role: "player",
     stats: baseStats,
@@ -74,8 +67,15 @@ export async function ensureUserProfile(user) {
     createdAt: serverTimestamp()
   };
 
-  await setDoc(userRef, newProfile);
-  return { id: user.uid, ...newProfile };
+  await setDoc(userRef, defaultProfile, { merge: true });
+
+  const snapshot = await getDoc(userRef);
+
+  if (snapshot.exists()) {
+    return { id: user.uid, ...snapshot.data(), ...sharedProfile };
+  }
+
+  return { id: user.uid, ...defaultProfile };
 }
 
 export async function getUserProfile(uid) {

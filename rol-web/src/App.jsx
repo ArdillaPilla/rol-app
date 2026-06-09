@@ -9,6 +9,17 @@ export default function App() {
   const [session, setSession] = useState({ loading: true, user: null, profile: null });
   const [error, setError] = useState("");
 
+  async function syncProfile(user) {
+    try {
+      const profile = await ensureUserProfile(user);
+      setError("");
+      setSession({ loading: false, user, profile });
+    } catch (err) {
+      setError(getFriendlyFirebaseError(err));
+      setSession({ loading: false, user, profile: null });
+    }
+  }
+
   useEffect(() => {
     if (!isFirebaseConfigured) {
       setSession({ loading: false, user: null, profile: null });
@@ -23,13 +34,7 @@ export default function App() {
         return;
       }
 
-      try {
-        const profile = await ensureUserProfile(user);
-        setSession({ loading: false, user, profile });
-      } catch (err) {
-        setError(getFriendlyFirebaseError(err));
-        setSession({ loading: false, user, profile: null });
-      }
+      await syncProfile(user);
     });
 
     return unsubscribe;
@@ -43,5 +48,12 @@ export default function App() {
     return <Login error={error} missingFirebaseConfig={missingFirebaseConfig} />;
   }
 
-  return <Dashboard user={session.user} profile={session.profile} error={error} />;
+  return (
+    <Dashboard
+      user={session.user}
+      profile={session.profile}
+      error={error}
+      onRetryProfile={() => syncProfile(session.user)}
+    />
+  );
 }
