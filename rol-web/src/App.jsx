@@ -1,0 +1,42 @@
+import { onAuthStateChanged } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import { auth, missingFirebaseConfig } from "./firebase";
+import { ensureUserProfile } from "./auth";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+
+export default function App() {
+  const [session, setSession] = useState({ loading: true, user: null, profile: null });
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setError("");
+
+      if (!user) {
+        setSession({ loading: false, user: null, profile: null });
+        return;
+      }
+
+      try {
+        const profile = await ensureUserProfile(user);
+        setSession({ loading: false, user, profile });
+      } catch (err) {
+        setError(err.message);
+        setSession({ loading: false, user, profile: null });
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  if (session.loading) {
+    return <div className="loading-screen">Preparando la mesa...</div>;
+  }
+
+  if (!session.user) {
+    return <Login error={error} missingFirebaseConfig={missingFirebaseConfig} />;
+  }
+
+  return <Dashboard user={session.user} profile={session.profile} error={error} />;
+}
