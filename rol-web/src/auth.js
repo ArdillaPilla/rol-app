@@ -5,6 +5,7 @@ import { auth, db, googleProvider } from "./firebase";
 export const baseStats = {
   level: 1,
   hp: 10,
+  maxHp: 10,
   strength: 10,
   dexterity: 10,
   constitution: 10,
@@ -25,12 +26,17 @@ export async function signInWithGoogle() {
 
 export function getFriendlyFirebaseError(error) {
   const message = error?.message ?? "";
+  const code = error?.code ?? "";
 
-  if (message.includes("client is offline") || message.includes("ERR_BLOCKED_BY_CLIENT")) {
+  if (
+    code === "unavailable" ||
+    message.includes("client is offline") ||
+    message.includes("ERR_BLOCKED_BY_CLIENT")
+  ) {
     return "No puedo conectar con Firestore. Suele pasar si un bloqueador del navegador esta bloqueando firestore.googleapis.com. Prueba a desactivar extensiones de privacidad/adblock para esta pagina o abre la web en una ventana sin extensiones.";
   }
 
-  if (message.includes("Missing or insufficient permissions")) {
+  if (code === "permission-denied" || message.includes("Missing or insufficient permissions")) {
     return "Firestore esta rechazando la lectura/escritura. Revisa que la base de datos exista y que las reglas esten publicadas.";
   }
 
@@ -65,8 +71,9 @@ export async function ensureUserProfile(user) {
     const completedProfile = {
       ...data,
       role: data.role ?? "player",
-      stats: { ...baseStats, ...(data.stats ?? {}) },
-      inventory: data.inventory ?? []
+      stats: { ...baseStats, ...(data.stats ?? {}), maxHp: data.stats?.maxHp ?? data.stats?.hp ?? baseStats.maxHp },
+      inventory: data.inventory ?? [],
+      healthLog: data.healthLog ?? []
     };
 
     await setDoc(userRef, completedProfile, { merge: true });
@@ -78,6 +85,7 @@ export async function ensureUserProfile(user) {
     role: "player",
     stats: baseStats,
     inventory: [],
+    healthLog: [],
     createdAt: serverTimestamp()
   };
 

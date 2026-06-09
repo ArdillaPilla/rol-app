@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Crown,
   LogOut,
+  Minus,
   Package,
+  Plus,
   RotateCw,
   Save,
   Shield,
@@ -21,6 +23,7 @@ import {
 const statLabels = {
   level: "Nivel",
   hp: "Vida",
+  maxHp: "Vida max.",
   strength: "Fuerza",
   dexterity: "Destreza",
   constitution: "Constitucion",
@@ -43,6 +46,26 @@ function createEditorState(target) {
     stats: { ...baseStats, ...(target?.stats ?? {}) },
     inventoryText: normalizeInventory(target?.inventory)
   };
+}
+
+function getHealth(userProfile) {
+  const hp = Number(userProfile?.stats?.hp ?? 0);
+  const maxHp = Math.max(Number(userProfile?.stats?.maxHp ?? hp ?? 1), 1);
+  return {
+    hp,
+    maxHp,
+    percentage: Math.max(0, Math.min(100, (hp / maxHp) * 100))
+  };
+}
+
+function formatLogDate(value) {
+  const date = value?.toDate ? value.toDate() : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function Dashboard({ user, profile, error, onRetryProfile }) {
@@ -120,6 +143,67 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
       setTableError(getFriendlyFirebaseError(err));
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleHealthChange(targetUser, amount) {
+    if (!isMaster || !targetUser) {
+      return;
+    }
+
+    const targetStats = { ...baseStats, ...(targetUser.stats ?? {}) };
+    const currentHp = Number(targetStats.hp ?? 0);
+    const maxHp = Math.max(Number(targetStats.maxHp ?? currentHp ?? 1), 1);
+    const nextHp = Math.max(0, Math.min(maxHp, currentHp + amount));
+    const realAmount = nextHp - currentHp;
+
+    if (realAmount === 0) {
+      return;
+    }
+
+    const healthLog = [
+      {
+        amount: realAmount,
+        from: currentHp,
+        to: nextHp,
+        by: profile?.displayName ?? user.displayName ?? "Master",
+        at: new Date().toISOString()
+      },
+      ...(targetUser.healthLog ?? [])
+    ].slice(0, 10);
+
+    setTableError("");
+
+    try {
+      await updateUserProfile(targetUser.id, {
+        stats: {
+          ...targetStats,
+          hp: nextHp,
+          maxHp
+        },
+        healthLog
+      });
+
+      setUsers((currentUsers) =>
+        currentUsers.map((currentUser) =>
+          currentUser.id === targetUser.id
+            ? { ...currentUser, stats: { ...targetStats, hp: nextHp, maxHp }, healthLog }
+            : currentUser
+        )
+      );
+
+      if (targetUser.id === selectedUserId) {
+        setEditor((current) => ({
+          ...current,
+          stats: {
+            ...current.stats,
+            hp: nextHp,
+            maxHp
+          }
+        }));
+      }
+    } catch (err) {
+      setTableError(getFriendlyFirebaseError(err));
     }
   }
 
@@ -211,24 +295,99 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
             {isLoadingUsers && <p className="empty-state">Cargando jugadores...</p>}
 
             <div className="users-table" role="table" aria-label="Jugadores de la mesa">
-              <div className="users-row users-head" role="row">
-                <span>Nombre</span>
+              <div className={isMaster ? "users-row users-head master-health-row" : "users-row users-head"} role="row">
+                <span>Jugador</span>
+                <span>Vida</span>
                 <span>Rol</span>
-                <span>Nivel</span>
+                {isMaster && <span>Acciones</span>}
               </div>
-              {users.map((tableUser) => (
-                <button
-                  className={tableUser.id === selectedUserId ? "users-row selected" : "users-row"}
-                  key={tableUser.id}
-                  type="button"
-                  onClick={() => setSelectedUserId(tableUser.id)}
-                >
-                  <span>{tableUser.displayName ?? "Jugador"}</span>
-                  <span>{tableUser.role === "master" ? "Master" : "Player"}</span>
-                  <span>{tableUser.stats?.level ?? "-"}</span>
-                </button>
-              ))}
+              {users.map((tableUser) => {
+                const health = getHealth(tableUser);
+
+                return (
+                  <div
+                    className={
+                      tableUser.id === selectedUserId
+                        ? "users-row health-user-row selected"
+                        : "users-row health-user-row"
+                    }
+                    key={tableUser.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedUserId(tableUser.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        setSelectedUserId(tableUser.id);
+                      }
+                    }}
+                  >
+                    <span className="health-name">{tableUser.displayName ?? "Jugador"}</span>
+                    <span className="health-cell">
+                      <span className="health-meta">
+                        {health.hp}/{health.maxHp}
+                      </span>
+                      <span className="health-bar" aria-hidden="true">
+                        <span style={{ width: `${health.percentage}%` }} />
+                      </span>
+                    </span>
+                    <span>{tableUser.role === "master" ? "Master" : "Player"}</span>
+                    {isMaster && (
+                      <span className="health-actions">
+                        <button
+                          className="health-button"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleHealthChange(tableUser, -1);
+                          }}
+                          title="Quitar vida"
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <button
+                          className="health-button"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleHealthChange(tableUser, 1);
+                          }}
+                          title="Poner vida"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+          </article>
+
+          <article className="panel">
+            <div className="panel-heading">
+              <Shield size={20} />
+              <h2>Log de vida</h2>
+            </div>
+            {selectedUser?.healthLog?.length ? (
+              <ol className="health-log">
+                {selectedUser.healthLog.slice(0, 10).map((entry, index) => (
+                  <li key={`${entry.at}-${index}`}>
+                    <span className={entry.amount > 0 ? "log-positive" : "log-negative"}>
+                      {entry.amount > 0 ? "+" : ""}
+                      {entry.amount}
+                    </span>
+                    <strong>
+                      {entry.from} {"->"} {entry.to}
+                    </strong>
+                    <small>
+                      {entry.by} {formatLogDate(entry.at)}
+                    </small>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="empty-state">Todavia no hay cambios de vida.</p>
+            )}
           </article>
 
           {selectedUser && (
