@@ -1,7 +1,7 @@
 import { onAuthStateChanged } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import { auth, isFirebaseConfigured, missingFirebaseConfig } from "./firebase";
-import { ensureUserProfile } from "./auth";
+import { ensureUserProfile, getFriendlyFirebaseError } from "./auth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 
@@ -27,7 +27,7 @@ export default function App() {
         const profile = await ensureUserProfile(user);
         setSession({ loading: false, user, profile });
       } catch (err) {
-        setError(err.message);
+        setError(getFriendlyFirebaseError(err));
         setSession({ loading: false, user, profile: null });
       }
     });

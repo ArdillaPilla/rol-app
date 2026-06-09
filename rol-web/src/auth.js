@@ -23,6 +23,20 @@ export async function signInWithGoogle() {
   return result.user;
 }
 
+export function getFriendlyFirebaseError(error) {
+  const message = error?.message ?? "";
+
+  if (message.includes("client is offline") || message.includes("ERR_BLOCKED_BY_CLIENT")) {
+    return "No puedo conectar con Firestore. Suele pasar si un bloqueador del navegador esta bloqueando firestore.googleapis.com. Prueba a desactivar extensiones de privacidad/adblock para esta pagina o abre la web en una ventana sin extensiones.";
+  }
+
+  if (message.includes("Missing or insufficient permissions")) {
+    return "Firestore esta rechazando la lectura/escritura. Revisa que la base de datos exista y que las reglas esten publicadas.";
+  }
+
+  return message || "Ha ocurrido un error con Firebase.";
+}
+
 export function logout() {
   if (!auth) {
     return Promise.resolve();

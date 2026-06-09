@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -25,5 +25,9 @@ export const isFirebaseConfigured = missingFirebaseConfig.length === 0;
 const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
 
 export const auth = app ? getAuth(app) : null;
-export const db = app ? getFirestore(app) : null;
+export const db = app
+  ? initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true
+    })
+  : null;
 export const googleProvider = app ? new GoogleAuthProvider() : null;

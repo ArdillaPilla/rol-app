@@ -1,6 +1,6 @@
 import { Chrome, ShieldCheck } from "lucide-react";
 import React, { useState } from "react";
-import { signInWithGoogle } from "../auth";
+import { getFriendlyFirebaseError, signInWithGoogle } from "../auth";
 
 export default function Login({ error, missingFirebaseConfig = [] }) {
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -13,7 +13,7 @@ export default function Login({ error, missingFirebaseConfig = [] }) {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setLocalError(err.message);
+      setLocalError(getFriendlyFirebaseError(err));
       setIsSigningIn(false);
     }
   }
