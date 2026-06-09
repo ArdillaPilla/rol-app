@@ -21,9 +21,7 @@ import {
 } from "../auth";
 
 const statLabels = {
-  level: "Nivel",
   hp: "Vida",
-  maxHp: "Vida max.",
   strength: "Fuerza",
   dexterity: "Destreza",
   constitution: "Constitucion",
