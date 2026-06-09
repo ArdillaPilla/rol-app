@@ -234,7 +234,6 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
         <img src={user.photoURL} alt="" className="avatar" referrerPolicy="no-referrer" />
         <div>
           <p className="profile-name">{profile?.displayName ?? user.displayName}</p>
-          <p className="profile-email">{profile?.email ?? user.email}</p>
         </div>
         <span className={isMaster ? "role-badge master" : "role-badge"}>
           {isMaster ? <Crown size={16} /> : <UserRound size={16} />}
