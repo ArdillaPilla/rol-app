@@ -43,5 +43,10 @@ service cloud.firestore {
         );
       allow delete: if isMaster();
     }
+
+    match /materials/{materialId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isMaster();
+    }
   }
 }

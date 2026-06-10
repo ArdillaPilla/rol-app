@@ -16,7 +16,7 @@ import {
   Heart,
   PenLine
 } from "lucide-react";
-import { collection, getDocs, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, onSnapshot, addDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase";
 import {
   baseStats,
@@ -74,19 +74,11 @@ function createCharacterStats(race, assignments) {
   };
 }
 
-function normalizeInventory(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => (typeof item === "string" ? item : item.name)).filter(Boolean).join("\n");
-  }
-
-  return "";
-}
-
 function createEditorState(target) {
   return {
     role: target?.role ?? "player",
     stats: { ...baseStats, ...(target?.stats ?? {}) },
-    inventoryText: normalizeInventory(target?.inventory)
+    inventoryItems: Array.isArray(target?.inventory) ? target.inventory : []
   };
 }
 
@@ -126,6 +118,12 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
   const [setupModifiers, setSetupModifiers] = useState(() => ({ ...defaultAssignments }));
   const [setupError, setSetupError] = useState("");
   const [isSavingCharacter, setIsSavingCharacter] = useState(false);
+  const [materials, setMaterials] = useState([]);
+  const [newMaterialName, setNewMaterialName] = useState("");
+  const [isAddingMaterial, setIsAddingMaterial] = useState(false);
+  const [materialsError, setMaterialsError] = useState("");
+  const [addingItemMaterial, setAddingItemMaterial] = useState("");
+  const [addingItemQuantity, setAddingItemQuantity] = useState(1);
   const selectedUser = useMemo(
     () => users.find((tableUser) => tableUser.id === selectedUserId) ?? profile,
     [profile, selectedUserId, users]
@@ -161,6 +159,24 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
 
     return unsubscribe;
   }, [user.uid]);
+
+  useEffect(() => {
+    const materialsRef = collection(db, "materials");
+    const unsubscribe = onSnapshot(
+      materialsRef,
+      (snapshot) => {
+        const materialsList = snapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+        setMaterials(materialsList);
+      },
+      (err) => {
+        console.error("Error cargando materiales:", err);
+      }
+    );
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (isNewPlayer) {
@@ -257,10 +273,7 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
     setTableError("");
 
     try {
-      const inventory = editor.inventoryText
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean);
+      const inventory = editor.inventoryItems.filter((item) => item.quantity > 0);
 
       await updateUserProfile(selectedUser.id, {
         role: editor.role,
@@ -278,6 +291,101 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleAddMaterial() {
+    if (!newMaterialName.trim()) {
+      setMaterialsError("El nombre del material no puede estar vacio.");
+      return;
+    }
+
+    const materialExists = materials.some(
+      (m) => m.name.toLowerCase() === newMaterialName.toLowerCase()
+    );
+
+    if (materialExists) {
+      setMaterialsError("Este material ya existe.");
+      return;
+    }
+
+    setIsAddingMaterial(true);
+    setMaterialsError("");
+
+    try {
+      const materialsRef = collection(db, "materials");
+      await addDoc(materialsRef, {
+        name: newMaterialName.trim(),
+        createdAt: new Date().toISOString()
+      });
+
+      setNewMaterialName("");
+    } catch (err) {
+      setMaterialsError(getFriendlyFirebaseError(err));
+    } finally {
+      setIsAddingMaterial(false);
+    }
+  }
+
+  async function handleDeleteMaterial(materialId) {
+    setMaterialsError("");
+
+    try {
+      const materialRef = doc(db, "materials", materialId);
+      await deleteDoc(materialRef);
+    } catch (err) {
+      setMaterialsError(getFriendlyFirebaseError(err));
+    }
+  }
+
+  function handleAddInventoryItem() {
+    if (!addingItemMaterial.trim() || addingItemQuantity <= 0) {
+      return;
+    }
+
+    setEditor((current) => {
+      const existingIndex = current.inventoryItems.findIndex(
+        (item) => item.name.toLowerCase() === addingItemMaterial.toLowerCase()
+      );
+
+      let updatedItems;
+      if (existingIndex >= 0) {
+        updatedItems = [...current.inventoryItems];
+        updatedItems[existingIndex] = {
+          ...updatedItems[existingIndex],
+          quantity: (updatedItems[existingIndex].quantity ?? 1) + Number(addingItemQuantity)
+        };
+      } else {
+        updatedItems = [
+          ...current.inventoryItems,
+          { name: addingItemMaterial.trim(), quantity: Number(addingItemQuantity) }
+        ];
+      }
+
+      return { ...current, inventoryItems: updatedItems };
+    });
+
+    setAddingItemMaterial("");
+    setAddingItemQuantity(1);
+  }
+
+  function handleRemoveInventoryItem(index) {
+    setEditor((current) => ({
+      ...current,
+      inventoryItems: current.inventoryItems.filter((_, i) => i !== index)
+    }));
+  }
+
+  function handleUpdateInventoryQuantity(index, newQuantity) {
+    const qty = Math.max(0, Number(newQuantity));
+    setEditor((current) => {
+      const updatedItems = [...current.inventoryItems];
+      if (qty === 0) {
+        updatedItems.splice(index, 1);
+      } else {
+        updatedItems[index] = { ...updatedItems[index], quantity: qty };
+      }
+      return { ...current, inventoryItems: updatedItems };
+    });
   }
 
   async function handleHealthChange(targetUser, amount) {
@@ -585,7 +693,7 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
             {profile?.inventory?.length ? (
               <ul className="inventory-list">
                 {profile.inventory.map((item, index) => (
-                  <li key={`${item.name ?? item}-${index}`}>{item.name ?? item}</li>
+                  <li key={`${item.name ?? item}-${index}`}>{item.name ?? item} x{item.quantity ?? item}</li>
                 ))}
               </ul>
             ) : (
@@ -740,15 +848,78 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
                     ))}
                   </div>
 
-                  <label className="field-label">
-                    Inventario
-                    <textarea
-                      rows="5"
-                      value={editor.inventoryText}
-                      onChange={(event) => setEditor({ ...editor, inventoryText: event.target.value })}
-                      placeholder="Un objeto por linea"
-                    />
-                  </label>
+                  <div className="field-label">
+                    <span className="field-label-text">Inventario</span>
+                    
+                    {materials.length > 0 ? (
+                      <>
+                        <div className="inventory-add-section">
+                          <select
+                            value={addingItemMaterial}
+                            onChange={(event) => setAddingItemMaterial(event.target.value)}
+                            className="inventory-select"
+                          >
+                            <option value="">Seleccionar material...</option>
+                            {materials.map((material) => (
+                              <option key={material.id} value={material.name}>
+                                {material.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <input
+                          type="number"
+                          min="1"
+                          value={addingItemQuantity}
+                          onChange={(event) => setAddingItemQuantity(Math.max(1, Number(event.target.value)))}
+                          className="inventory-quantity"
+                          placeholder="Cantidad"
+                        />
+                        <button
+                          type="button"
+                          className="primary-button"
+                          onClick={handleAddInventoryItem}
+                          disabled={!addingItemMaterial}
+                        >
+                          Agregar
+                        </button>
+
+                        {editor.inventoryItems.length > 0 && (
+                          <div className="inventory-list">
+                            <p className="inventory-list-title">Items actuales:</p>
+                            <ul>
+                              {editor.inventoryItems.map((item, index) => (
+                                <li key={index} className="inventory-list-item">
+                                  <span className="item-name">{item.name}</span>
+                                  <div className="item-controls">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={item.quantity}
+                                      onChange={(event) =>
+                                        handleUpdateInventoryQuantity(index, event.target.value)
+                                      }
+                                      className="item-quantity-input"
+                                    />
+                                    <button
+                                      type="button"
+                                      className="delete-item-button"
+                                      onClick={() => handleRemoveInventoryItem(index)}
+                                      title="Eliminar item"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="empty-state">Crea materiales primero para agregarlos al inventario.</p>
+                    )}
+                  </div>
 
                   <button className="primary-button" type="button" onClick={handleSave} disabled={isSaving}>
                     <Save size={18} />
@@ -763,6 +934,63 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
                       <strong>{selectedUser.stats?.[key] ?? "-"}</strong>
                     </div>
                   ))}
+                </div>
+              )}
+            </article>
+          )}
+
+          {isMaster && (
+            <article className="panel">
+              <div className="panel-heading">
+                <Package size={20} />
+                <h2>Gestionar materiales</h2>
+              </div>
+              <p>Crea los tipos de materiales que los jugadores podran usar.</p>
+
+              {materialsError && <p className="inline-error">{materialsError}</p>}
+
+              <div className="field-label">
+                <label htmlFor="new-material">Nuevo material</label>
+                <input
+                  id="new-material"
+                  type="text"
+                  value={newMaterialName}
+                  onChange={(event) => setNewMaterialName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      handleAddMaterial();
+                    }
+                  }}
+                  placeholder="Ej. Tronco, Oro, Poción..."
+                />
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={handleAddMaterial}
+                  disabled={isAddingMaterial}
+                >
+                  {isAddingMaterial ? "Agregando..." : "Agregar"}
+                </button>
+              </div>
+
+              {materials.length > 0 && (
+                <div className="materials-list">
+                  <p className="materials-list-header">Materiales existentes:</p>
+                  <ul>
+                    {materials.map((material) => (
+                      <li key={material.id} className="material-item">
+                        <span>{material.name}</span>
+                        <button
+                          type="button"
+                          className="delete-button"
+                          onClick={() => handleDeleteMaterial(material.id)}
+                          title="Eliminar material"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </article>

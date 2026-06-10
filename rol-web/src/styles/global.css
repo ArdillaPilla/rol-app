@@ -570,6 +570,13 @@ p {
 
 .field-label textarea {
   resize: vertical;
+  line-height: 1.5;
+}
+
+.field-label input::placeholder,
+.field-label textarea::placeholder {
+  color: var(--color-muted);
+  opacity: 0.8;
 }
 
 .editor-stats {
@@ -601,6 +608,221 @@ p {
   margin-top: 6px;
   color: var(--color-text-strong);
   font-size: 1.15rem;
+}
+
+.input-with-button {
+  display: flex;
+  gap: 8px;
+}
+
+.input-with-button input {
+  flex: 1;
+}
+
+.input-with-button button {
+  white-space: nowrap;
+}
+
+.field-label-text {
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-strong);
+}
+
+.quick-add-materials {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--color-surface-muted);
+  border-radius: 8px;
+}
+
+.materials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.material-button {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.material-button:hover {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.materials-list {
+  margin-top: 16px;
+}
+
+.materials-list-header {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-strong);
+}
+
+.materials-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.material-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.delete-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+
+.delete-button:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.inventory-add-section {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.inventory-select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.inventory-quantity-section {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.inventory-quantity {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 2px solid var(--color-primary);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text-strong);
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+  font-family: inherit;
+}
+
+.inventory-quantity::placeholder {
+  color: var(--color-muted);
+}
+
+.inventory-quantity:focus {
+  outline: none;
+  border-color: var(--color-primary-strong);
+  box-shadow: 0 0 0 3px rgba(47, 133, 90, 0.1);
+}
+
+.inventory-list {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--color-surface-muted);
+  border-radius: 6px;
+}
+
+.inventory-list-title {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-strong);
+}
+
+.inventory-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inventory-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.item-name {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.item-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-quantity-input {
+  width: 60px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.delete-item-button {
+  background: var(--color-danger);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 0.875rem;
+  transition: background 0.2s;
+}
+
+.delete-item-button:hover {
+  background: var(--color-primary-strong);
 }
 
 .inline-error {
