@@ -8,6 +8,19 @@ import Dashboard from "./pages/Dashboard";
 export default function App() {
   const [session, setSession] = useState({ loading: true, user: null, profile: null });
   const [error, setError] = useState("");
+  const [theme, setTheme] = useState("light");
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem("theme");
+    const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    const currentTheme = storedTheme ?? preferredTheme;
+    setTheme(currentTheme);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("theme", theme);
+  }, [theme]);
 
   async function syncProfile(user) {
     try {
@@ -54,6 +67,8 @@ export default function App() {
       user={session.user}
       profile={session.profile}
       error={error}
+      theme={theme}
+      onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
       onRetryProfile={() => syncProfile(session.user)}
     />
   );

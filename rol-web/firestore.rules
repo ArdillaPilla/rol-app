@@ -33,7 +33,12 @@ service cloud.firestore {
             "email",
             "photoURL",
             "uid",
-            "updatedAt"
+            "updatedAt",
+            "race",
+            "stats",
+            "inventory",
+            "healthLog",
+            "characterCreated"
           ])
         );
       allow delete: if isMaster();

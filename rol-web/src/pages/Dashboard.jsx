@@ -3,12 +3,14 @@ import {
   Crown,
   LogOut,
   Minus,
+  Moon,
   Package,
   Plus,
   RotateCw,
   Save,
   Shield,
   Sparkles,
+  Sun,
   UserRound,
   Users,
   Heart,
@@ -16,6 +18,7 @@ import {
 } from "lucide-react";
 import {
   baseStats,
+  raceBonuses,
   getAllUserProfiles,
   getFriendlyFirebaseError,
   logout,
@@ -32,6 +35,43 @@ const statLabels = {
   wisdom: "Sabiduria",
   charisma: "Carisma"
 };
+
+const raceOptions = [
+  { id: "Humano", label: "Humano" },
+  { id: "Elfo", label: "Elfo" },
+  { id: "Enano", label: "Enano" },
+  { id: "Orco", label: "Orco" },
+  { id: "Mediano", label: "Mediano" }
+];
+
+const abilityStats = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"];
+const modifierValues = [3, 2, 1, 0, -1, -2];
+const defaultAssignments = abilityStats.reduce(
+  (acc, stat) => ({ ...acc, [stat]: null }),
+  {}
+);
+
+function createCharacterStats(race, assignments) {
+  const raceBonus = raceBonuses[race] ?? raceBonuses.Humano;
+  const stats = abilityStats.reduce(
+    (acc, stat) => ({
+      ...acc,
+      [stat]: baseStats[stat] + (raceBonus[stat] ?? 0) + Number(assignments[stat] ?? 0)
+    }),
+    {}
+  );
+
+  const constitution = stats.constitution;
+  const hpFromCon = 10 + Math.floor((constitution - 10) / 2);
+  const hp = Math.max(baseStats.hp, hpFromCon);
+
+  return {
+    ...baseStats,
+    ...stats,
+    hp,
+    maxHp: hp
+  };
+}
 
 function normalizeInventory(value) {
   if (Array.isArray(value)) {
@@ -69,7 +109,7 @@ function formatLogDate(value) {
   return date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function Dashboard({ user, profile, error, onRetryProfile }) {
+export default function Dashboard({ user, profile, error, theme, onToggleTheme, onRetryProfile }) {
   const isMaster = profile?.role === "master";
   const stats = profile?.stats ?? {};
   const [users, setUsers] = useState([]);
@@ -79,6 +119,12 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(profile?.displayName ?? user.displayName);
+  const isNewPlayer = profile?.characterCreated !== true;
+  const [setupName, setSetupName] = useState(profile?.displayName ?? user.displayName ?? "");
+  const [setupRace, setSetupRace] = useState(profile?.race ?? "Humano");
+  const [setupModifiers, setSetupModifiers] = useState(() => ({ ...defaultAssignments }));
+  const [setupError, setSetupError] = useState("");
+  const [isSavingCharacter, setIsSavingCharacter] = useState(false);
   const selectedUser = useMemo(
     () => users.find((tableUser) => tableUser.id === selectedUserId) ?? profile,
     [profile, selectedUserId, users]
@@ -108,6 +154,15 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
   }, []);
 
   useEffect(() => {
+    if (isNewPlayer) {
+      setSetupName(profile?.displayName ?? user.displayName ?? "");
+      setSetupRace(profile?.race ?? "Humano");
+      setSetupModifiers({ ...defaultAssignments });
+      setSetupError("");
+    }
+  }, [profile?.id, isNewPlayer, profile?.displayName, profile?.race, user.displayName]);
+
+  useEffect(() => {
     setEditor(createEditorState(selectedUser));
   }, [selectedUser?.id]);
 
@@ -119,6 +174,45 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
         [statKey]: Number(value)
       }
     }));
+  }
+
+  const setupStats = React.useMemo(
+    () => createCharacterStats(setupRace, setupModifiers),
+    [setupRace, setupModifiers]
+  );
+
+  function setModifier(statKey, value) {
+    setSetupModifiers((current) => ({
+      ...current,
+      [statKey]: current[statKey] === value ? null : Number(value)
+    }));
+  }
+
+  async function handleCreateCharacter() {
+    if (!setupName.trim()) {
+      setSetupError("Debes indicar un nombre para tu personaje.");
+      return;
+    }
+
+    setIsSavingCharacter(true);
+    setSetupError("");
+
+    try {
+      await updateUserProfile(user.uid, {
+        displayName: setupName.trim(),
+        race: setupRace,
+        stats: setupStats,
+        characterCreated: true
+      });
+
+      if (typeof onRetryProfile === "function") {
+        await onRetryProfile();
+      }
+    } catch (err) {
+      setSetupError(getFriendlyFirebaseError(err));
+    } finally {
+      setIsSavingCharacter(false);
+    }
   }
 
   async function handleSave() {
@@ -229,6 +323,122 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
     }
   };
 
+  if (isNewPlayer) {
+    return (
+      <main className="dashboard-page">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Primer registro</p>
+            <h1>Crear tu personaje</h1>
+          </div>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <button className="ghost-button" type="button" onClick={onToggleTheme} title="Cambiar tema">
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+              {theme === "dark" ? "Claro" : "Oscuro"}
+            </button>
+            <button className="ghost-button" type="button" onClick={logout} title="Cerrar sesion">
+              <LogOut size={18} />
+              Salir
+            </button>
+          </div>
+        </header>
+
+        {setupError && (
+          <section className="status-panel">
+            <p className="error-message">{setupError}</p>
+          </section>
+        )}
+
+        <article className="panel">
+          <div className="panel-heading">
+            <Shield size={20} />
+            <h2>Ficha inicial</h2>
+          </div>
+
+          <p>Elige el nombre, selecciona la raza y asigna los valores de tus capacidades.</p>
+
+          <div className="field-label">
+            <label htmlFor="setup-name">Nombre del personaje</label>
+            <input
+              id="setup-name"
+              type="text"
+              value={setupName}
+              onChange={(event) => setSetupName(event.target.value)}
+              placeholder="Ej. Aria, Borin, Lyra"
+            />
+          </div>
+
+          <div className="field-label">
+            <label htmlFor="setup-race">Raza</label>
+            <select
+              id="setup-race"
+              value={setupRace}
+              onChange={(event) => setSetupRace(event.target.value)}
+            >
+              {raceOptions.map((race) => (
+                <option key={race.id} value={race.id}>
+                  {race.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <article className="panel editor-panel">
+            <div className="panel-heading split-heading">
+              <div className="inline-heading">
+                <Sparkles size={20} />
+                <h2>Asignar stats</h2>
+              </div>
+              <p>Raza: {setupRace}</p>
+            </div>
+
+            <div className="stats-grid">
+              {abilityStats.map((stat) => (
+                <div className="stat-tile" key={stat}>
+                  <span>{statLabels[stat]}</span>
+                  <strong>{setupStats[stat]}</strong>
+                  <div className="modifier-row">
+                    {modifierValues.map((value) => {
+                      const alreadyUsedByOther = Object.entries(setupModifiers).some(
+                        ([otherStat, otherValue]) =>
+                          otherStat !== stat && otherValue !== null && Number(otherValue) === value
+                      );
+
+                      return (
+                        <button
+                          key={`${stat}-${value}`}
+                          type="button"
+                          className={`modifier-button ${setupModifiers[stat] === value ? "selected" : ""}`}
+                          onClick={() => setModifier(stat, value)}
+                          disabled={alreadyUsedByOther}
+                        >
+                          {value > 0 ? `+${value}` : value}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <div className="stat-tile" style={{ gridColumn: "span 2" }}>
+                <span>Vida base</span>
+                <strong>{setupStats.hp}</strong>
+              </div>
+            </div>
+          </article>
+
+          <button
+            type="button"
+            className="primary-button"
+            onClick={handleCreateCharacter}
+            disabled={isSavingCharacter}
+          >
+            {isSavingCharacter ? "Guardando..." : "Finalizar ficha"}
+          </button>
+        </article>
+      </main>
+    );
+  }
+
   return (
     <main className="dashboard-page">
       <header className="topbar">
@@ -236,10 +446,16 @@ export default function Dashboard({ user, profile, error, onRetryProfile }) {
           <p className="eyebrow">Mesa de rol</p>
           <h1>{isMaster ? "Panel del Master" : "Ficha de jugador"}</h1>
         </div>
-        <button className="ghost-button" type="button" onClick={logout} title="Cerrar sesion">
-          <LogOut size={18} />
-          Salir
-        </button>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button className="ghost-button" type="button" onClick={onToggleTheme} title="Cambiar tema">
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === "dark" ? "Claro" : "Oscuro"}
+          </button>
+          <button className="ghost-button" type="button" onClick={logout} title="Cerrar sesion">
+            <LogOut size={18} />
+            Salir
+          </button>
+        </div>
       </header>
 
       {error && (

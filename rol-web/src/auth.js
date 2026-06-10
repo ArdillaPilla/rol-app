@@ -14,6 +14,49 @@ export const baseStats = {
   charisma: 10
 };
 
+export const raceBonuses = {
+  Humano: {
+    strength: 1,
+    dexterity: 1,
+    constitution: 1,
+    intelligence: 1,
+    wisdom: 1,
+    charisma: 1
+  },
+  Elfo: {
+    strength: 0,
+    dexterity: 2,
+    constitution: 0,
+    intelligence: 1,
+    wisdom: 0,
+    charisma: 0
+  },
+  Enano: {
+    strength: 1,
+    dexterity: 0,
+    constitution: 2,
+    intelligence: 0,
+    wisdom: 0,
+    charisma: 0
+  },
+  Orco: {
+    strength: 2,
+    dexterity: 0,
+    constitution: 1,
+    intelligence: 0,
+    wisdom: 0,
+    charisma: 0
+  },
+  Mediano: {
+    strength: 0,
+    dexterity: 2,
+    constitution: 0,
+    intelligence: 0,
+    wisdom: 0,
+    charisma: 1
+  }
+};
+
 export async function signInWithGoogle() {
   if (!auth || !googleProvider) {
     throw new Error("Firebase no esta configurado. Revisa las variables VITE_FIREBASE_*.");
@@ -72,6 +115,8 @@ export async function ensureUserProfile(user) {
       ...data,
       displayName: data.displayName ?? authDisplayName,
       role: data.role ?? "player",
+      race: data.race ?? "Humano",
+      characterCreated: data.characterCreated ?? false,
       stats: { ...baseStats, ...(data.stats ?? {}), maxHp: data.stats?.maxHp ?? data.stats?.hp ?? baseStats.maxHp },
       inventory: data.inventory ?? [],
       healthLog: data.healthLog ?? []
@@ -85,6 +130,8 @@ export async function ensureUserProfile(user) {
     displayName: authDisplayName,
     ...sharedProfile,
     role: "player",
+    race: "Humano",
+    characterCreated: false,
     stats: baseStats,
     inventory: [],
     healthLog: [],
