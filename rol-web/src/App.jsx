@@ -1,6 +1,7 @@
 import { onAuthStateChanged } from "firebase/auth";
-import React, { useEffect, useState } from "react";
-import { auth, isFirebaseConfigured, missingFirebaseConfig } from "./firebase";
+import React, { useEffect, useRef, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { auth, db, isFirebaseConfigured, missingFirebaseConfig } from "./firebase";
 import { ensureUserProfile, getFriendlyFirebaseError } from "./auth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -9,6 +10,7 @@ export default function App() {
   const [session, setSession] = useState({ loading: true, user: null, profile: null });
   const [error, setError] = useState("");
   const [theme, setTheme] = useState("light");
+  const profileUnsubscribe = useRef(null);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("theme");
@@ -42,16 +44,45 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setError("");
+      profileUnsubscribe.current?.();
+      profileUnsubscribe.current = null;
 
       if (!user) {
         setSession({ loading: false, user: null, profile: null });
         return;
       }
 
-      await syncProfile(user);
+      try {
+        await ensureUserProfile(user);
+      } catch (err) {
+        setError(getFriendlyFirebaseError(err));
+        setSession({ loading: false, user, profile: null });
+        return;
+      }
+
+      const userRef = doc(db, "users", user.uid);
+      profileUnsubscribe.current = onSnapshot(
+        userRef,
+        (snapshot) => {
+          if (!snapshot.exists()) {
+            setSession({ loading: false, user, profile: null });
+            return;
+          }
+
+          setError("");
+          setSession({ loading: false, user, profile: { id: snapshot.id, ...snapshot.data() } });
+        },
+        (err) => {
+          setError(getFriendlyFirebaseError(err));
+          setSession({ loading: false, user, profile: null });
+        }
+      );
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      profileUnsubscribe.current?.();
+    };
   }, []);
 
   if (session.loading) {

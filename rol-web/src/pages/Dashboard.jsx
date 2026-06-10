@@ -16,10 +16,11 @@ import {
   Heart,
   PenLine
 } from "lucide-react";
+import { collection, getDocs, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase";
 import {
   baseStats,
   raceBonuses,
-  getAllUserProfiles,
   getFriendlyFirebaseError,
   logout,
   updateUserProfile
@@ -131,27 +132,35 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
   );
   const [editor, setEditor] = useState(() => createEditorState(selectedUser));
 
-  async function loadUsers() {
+  useEffect(() => {
     setIsLoadingUsers(true);
     setTableError("");
 
-    try {
-      const profiles = await getAllUserProfiles();
-      setUsers(profiles);
+    const usersRef = collection(db, "users");
+    const unsubscribe = onSnapshot(
+      usersRef,
+      (snapshot) => {
+        const profiles = snapshot.docs
+          .map((userDoc) => ({ id: userDoc.id, ...userDoc.data() }))
+          .sort((a, b) => (a.displayName ?? "").localeCompare(b.displayName ?? ""));
 
-      if (!profiles.some((tableUser) => tableUser.id === selectedUserId)) {
-        setSelectedUserId(profiles[0]?.id ?? user.uid);
+        setUsers(profiles);
+        setIsLoadingUsers(false);
+
+        setSelectedUserId((currentSelectedUserId) =>
+          profiles.some((tableUser) => tableUser.id === currentSelectedUserId)
+            ? currentSelectedUserId
+            : profiles[0]?.id ?? user.uid
+        );
+      },
+      (err) => {
+        setTableError(getFriendlyFirebaseError(err));
+        setIsLoadingUsers(false);
       }
-    } catch (err) {
-      setTableError(getFriendlyFirebaseError(err));
-    } finally {
-      setIsLoadingUsers(false);
-    }
-  }
+    );
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+    return unsubscribe;
+  }, [user.uid]);
 
   useEffect(() => {
     if (isNewPlayer) {
@@ -164,7 +173,31 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
 
   useEffect(() => {
     setEditor(createEditorState(selectedUser));
-  }, [selectedUser?.id]);
+  }, [selectedUser]);
+
+  async function loadUsers() {
+    setIsLoadingUsers(true);
+    setTableError("");
+
+    try {
+      const usersRef = collection(db, "users");
+      const snapshot = await getDocs(usersRef);
+      const profiles = snapshot.docs
+        .map((userDoc) => ({ id: userDoc.id, ...userDoc.data() }))
+        .sort((a, b) => (a.displayName ?? "").localeCompare(b.displayName ?? ""));
+
+      setUsers(profiles);
+      setSelectedUserId((currentSelectedUserId) =>
+        profiles.some((tableUser) => tableUser.id === currentSelectedUserId)
+          ? currentSelectedUserId
+          : profiles[0]?.id ?? user.uid
+      );
+    } catch (err) {
+      setTableError(getFriendlyFirebaseError(err));
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  }
 
   function updateStat(statKey, value) {
     setEditor((current) => ({
