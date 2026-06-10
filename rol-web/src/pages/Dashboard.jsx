@@ -688,7 +688,7 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
           <article className="panel">
             <div className="panel-heading">
               <Package size={20} />
-              <h2>Tu inventario</h2>
+              <h2>Inventario</h2>
             </div>
             {profile?.inventory?.length ? (
               <ul className="inventory-list">
