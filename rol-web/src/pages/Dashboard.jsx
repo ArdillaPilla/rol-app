@@ -102,7 +102,7 @@ function formatLogDate(value) {
   return date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function Dashboard({ user, profile, error, theme, onToggleTheme, onRetryProfile }) {
+export default function Dashboard({ user, profile, error, theme, onToggleTheme, onRetryProfile, activePage }) {
   const isMaster = profile?.role === "master";
   const stats = profile?.stats ?? {};
   const [users, setUsers] = useState([]);
@@ -659,7 +659,7 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
             </p>
           </div>
           <strong className="player-number">
-            Lv. {profile?.stats?.level ?? 1}
+            Lv. {profile?.stats?.level ?? 1} {profile?.race ?? Unknown}
           </strong>
         </div>
         <span className={isMaster ? "role-badge master" : "role-badge"}>
@@ -789,32 +789,7 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
             </div>
           </article>
 
-          <article className="panel">
-            <div className="panel-heading">
-              <Heart size={20} />
-              <h2>Log de vida</h2>
-            </div>
-            {selectedUser?.healthLog?.length ? (
-              <ol className="health-log">
-                {selectedUser.healthLog.slice(0, 10).map((entry, index) => (
-                  <li key={`${entry.at}-${index}`}>
-                    <span className={entry.amount > 0 ? "log-positive" : "log-negative"}>
-                      {entry.amount > 0 ? "+" : ""}
-                      {entry.amount}
-                    </span>
-                    <strong>
-                      {entry.from} {"->"} {entry.to}
-                    </strong>
-                    <small>
-                      {entry.by} {formatLogDate(entry.at)}
-                    </small>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="empty-state">Todavia no hay cambios de vida.</p>
-            )}
-          </article>
+          
 
           {selectedUser && (
             <article className={isMaster ? "panel editor-panel" : "panel editor-panel readonly"}>
@@ -938,6 +913,33 @@ export default function Dashboard({ user, profile, error, theme, onToggleTheme, 
               )}
             </article>
           )}
+
+          <article className="panel">
+            <div className="panel-heading">
+              <Heart size={20} />
+              <h2>Log de vida</h2>
+            </div>
+            {selectedUser?.healthLog?.length ? (
+              <ol className="health-log">
+                {selectedUser.healthLog.slice(0, 10).map((entry, index) => (
+                  <li key={`${entry.at}-${index}`}>
+                    <span className={entry.amount > 0 ? "log-positive" : "log-negative"}>
+                      {entry.amount > 0 ? "+" : ""}
+                      {entry.amount}
+                    </span>
+                    <strong>
+                      {entry.from} {"->"} {entry.to}
+                    </strong>
+                    <small>
+                      {entry.by} {formatLogDate(entry.at)}
+                    </small>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="empty-state">Todavia no hay cambios de vida.</p>
+            )}
+          </article>
 
           {isMaster && (
             <article className="panel">

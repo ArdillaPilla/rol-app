@@ -5,11 +5,13 @@ import { auth, db, isFirebaseConfigured, missingFirebaseConfig } from "./firebas
 import { ensureUserProfile, getFriendlyFirebaseError } from "./auth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Sidebar from "./pages/Sidebar";
 
 export default function App() {
   const [session, setSession] = useState({ loading: true, user: null, profile: null });
   const [error, setError] = useState("");
   const [theme, setTheme] = useState("light");
+  const [activePage, setActivePage] = useState("dashboard");
   const profileUnsubscribe = useRef(null);
 
   useEffect(() => {
@@ -94,13 +96,24 @@ export default function App() {
   }
 
   return (
-    <Dashboard
-      user={session.user}
-      profile={session.profile}
-      error={error}
-      theme={theme}
-      onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-      onRetryProfile={() => syncProfile(session.user)}
-    />
+    <div className="dashboard-layout">
+      <Sidebar
+        profile={session.profile}
+        user={session.user}
+        activePage={activePage}
+        onNavigate={setActivePage}
+        theme={theme}
+        onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+      />
+      <Dashboard
+        user={session.user}
+        profile={session.profile}
+        error={error}
+        theme={theme}
+        onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+        onRetryProfile={() => syncProfile(session.user)}
+        activePage={activePage}
+      />
+    </div>
   );
 }
