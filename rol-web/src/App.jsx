@@ -13,6 +13,7 @@ export default function App() {
   const [theme, setTheme] = useState("light");
   const [activePage, setActivePage] = useState("dashboard");
   const profileUnsubscribe = useRef(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("theme");
@@ -97,6 +98,13 @@ export default function App() {
 
   return (
     <div className="dashboard-layout">
+      {!sidebarCollapsed && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
+
       <Sidebar
         profile={session.profile}
         user={session.user}
@@ -104,7 +112,10 @@ export default function App() {
         onNavigate={setActivePage}
         theme={theme}
         onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
       />
+
       <Dashboard
         user={session.user}
         profile={session.profile}

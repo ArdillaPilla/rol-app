@@ -27,8 +27,16 @@ const navItems = [
   },
 ];
 
-export default function Sidebar({ profile, user, activePage, onNavigate, theme, onToggleTheme }) {
-  const [collapsed, setCollapsed] = useState(false);
+export default function Sidebar({
+  profile,
+  user,
+  activePage,
+  onNavigate,
+  theme,
+  onToggleTheme,
+  collapsed,
+  setCollapsed
+}) {
   const isMaster = profile?.role === "master";
 
   return (
