@@ -831,7 +831,7 @@ p {
   font-size: 0.92rem;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1200px) {
   .dashboard-page {
     padding: 18px;
   }
@@ -881,6 +881,14 @@ p {
   .health-log small {
     grid-column: 2;
     text-align: left;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-layout {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -938,12 +946,6 @@ p {
 /* ========================================
    SIDEBAR STYLES
    ======================================== */
-
-.dashboard-layout {
-  display: flex;
-  min-height: 100vh;
-  background: var(--color-bg);
-}
 
 .sidebar {
   width: 240px;
@@ -1197,45 +1199,41 @@ p {
     padding: 20px;
   }
 }
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
 
-@media (max-width: 768px) {
-  .dashboard-layout {
-    flex-direction: column;
-  }
+.sidebar {
+  position: fixed;
+  height: 100%;
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  transition: width 260ms ease;
+  overflow: hidden;
+}
 
-  .sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--color-border);
-    flex-direction: row;
-    height: auto;
-  }
+.sidebar--collapsed {
+  width: 67px;
+}
 
-  .sidebar--collapsed {
-    width: 100%;
-  }
+.dashboard-page {
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
+}
 
-  .sidebar-brand {
-    flex: 1;
-  }
-
-  .sidebar-nav {
-    display: none;
-  }
-
-  .sidebar-footer {
-    display: flex;
-    flex-direction: row;
-    border-left: 1px solid var(--color-border);
-    border-top: none;
-    gap: 4px;
-  }
-
-  .sidebar-collapse-btn {
-    display: none;
-  }
-
-  .dashboard-page {
-    padding: 16px;
-  }
+.content-grid,
+.table-layout,
+.left-column,
+.right-column {
+  min-width: 0;
+}
+.dashboard-page {
+  margin-left: 67px;
 }
